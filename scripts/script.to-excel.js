@@ -1,5 +1,20 @@
-const { json2csv } = require("json-2-csv");
 const datos_json = require(__dirname + "/../datos/wakanim.tv.json");
+const sort_properties = function sortObjectByKeyNameList(object, sortWith) {
+    let keys;
+    let sortFn;
+    if (typeof sortWith === 'function') {
+        sortFn = sortWith;
+    } else {
+        keys = sortWith;
+    }
+    let objectKeys = Object.keys(object);
+    return (keys || []).concat(objectKeys.sort(sortFn)).reduce(function (total, key) {
+        if (objectKeys.indexOf(key) !== -1) {
+            total[key] = object[key];
+        }
+        return total;
+    }, Object.create(null));
+};
 for(let index = 0; index < datos_json.length; index++) {
     datos_json[index].genres = datos_json[index].genres.join(" | ");
     if(datos_json[index].seasons) {
@@ -17,10 +32,24 @@ for(let index = 0; index < datos_json.length; index++) {
     } else {
         datos_json[index].episodes = 0;
     }
-    datos_json[index].title = datos_json[index].title.replace(";", '";');
+    datos_json[index] = sort_properties(datos_json[index], [
+        "title",
+        "seasons",
+        "episodes",
+        "rating",
+        "year",
+        "genres",
+        "description",
+        "link",
+        "image"
+    ]);
 }
-json2csv(datos_json, function(error, datos_csv) {
+const { Parser } = require("@json2csv/plainjs");
+try {
+    const parser = new Parser();
+    const datos_csv = parser.parse(datos_json);
     require("fs").writeFileSync(__dirname + "/../datos/wakanim.tv.csv", datos_csv, "utf8");
-}, {
-    excelBOM: true
-});
+    console.log("OK.");
+} catch (err) {
+    console.error(err);
+}
